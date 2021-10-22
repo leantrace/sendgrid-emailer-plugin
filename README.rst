@@ -32,6 +32,7 @@ the plugin group; otherwise, they will not be accessible to this plug-in and run
 Configuration
 """""""""""""
 The plugin only takes two configuration parameters:
+
 - Default Sender - A SendGrid registered email address that is allowed to send emails.
 - Send Grid API Key - A SendGrid API key for the plugin to authenticate against the SendGrid API.
 
