@@ -29,8 +29,6 @@ import se.curity.identityserver.sdk.data.email.RenderableEmail;
 import se.curity.identityserver.sdk.email.Emailer;
 import se.curity.identityserver.sdk.errors.ErrorCode;
 
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
 import java.io.IOException;
 
 public final class SendGridEmailSender implements Emailer
@@ -46,11 +44,10 @@ public final class SendGridEmailSender implements Emailer
     }
 
     @Override
-    public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException
-    {
-        Personalization personalization = new Personalization();
-        Mail mail = new Mail();
-        if(isValidEmailAddress(_configuration.getDefaultSender())) {
+    public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException {
+        try {
+            Personalization personalization = new Personalization();
+            Mail mail = new Mail();
             Email to = new Email(recipient);
             personalization.addTo(to);
             mail.addContent(new Content("text/plain", renderableEmail.renderPlainText()));
@@ -58,39 +55,26 @@ public final class SendGridEmailSender implements Emailer
             mail.setFrom(new Email(_configuration.getDefaultSender()));
             mail.setSubject(renderableEmail.getSubject());
             mail.addPersonalization(personalization);
-        }
 
-        SendGrid sg = new SendGrid(_sendGridAPIKey);
-
-        Request request = new Request();
-
-        try {
+            SendGrid sg = new SendGrid(_sendGridAPIKey);
+            Request request = new Request();
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
             Response response = sg.api(request);
+
             if (response.getStatusCode()==202)
             {
                 _logger.debug("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
             }
             else
             {
-                throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Unable to send email using Sendgrid");
+                _logger.debug("Failed to send email using Sendgrid");
+                throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send email using Sendgrid");
             }
 
-        } catch (IOException ex) {
-            throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Unable to send email using Sendgrid");
+        } catch (IOException e) {
+            throw new IOException("Failed to send email using Sendgrid", e);
         }
-    }
-
-    public static boolean isValidEmailAddress(String email) {
-        boolean result = true;
-        try {
-            InternetAddress emailAddr = new InternetAddress(email);
-            emailAddr.validate();
-        } catch (AddressException ex) {
-            result = false;
-        }
-        return result;
     }
 }
