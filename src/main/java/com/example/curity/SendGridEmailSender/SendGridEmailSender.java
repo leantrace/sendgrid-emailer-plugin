@@ -30,6 +30,8 @@ import se.curity.identityserver.sdk.email.Emailer;
 import se.curity.identityserver.sdk.errors.ErrorCode;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.util.Properties;
 
 public final class SendGridEmailSender implements Emailer
 {
@@ -46,33 +48,42 @@ public final class SendGridEmailSender implements Emailer
     @Override
     public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException {
         try {
-            Personalization personalization = new Personalization();
-            Mail mail = new Mail();
-            Email to = new Email(recipient);
-            personalization.addTo(to);
-            mail.addContent(new Content("text/plain", renderableEmail.renderPlainText()));
-            mail.addContent(new Content("text/html", renderableEmail.render()));
-            mail.setFrom(new Email(_configuration.getDefaultSender()));
-            mail.setSubject(renderableEmail.getSubject());
-            mail.addPersonalization(personalization);
-
+            _logger.debug(renderableEmail.renderPlainText());
+            Properties p = new Properties();
+            try {
+                p.load(new StringReader(renderableEmail.renderPlainText()));
+            } catch (IOException e){/*ignore */}
             SendGrid sg = new SendGrid(_sendGridAPIKey);
             Request request = new Request();
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
+            Personalization personalization = new Personalization();
+            Mail mail = new Mail();
+            Email to = new Email(recipient);
+            personalization.addTo(to);
+            mail.setFrom(new Email(_configuration.getDefaultSender()));
+            mail.setSubject(renderableEmail.getSubject());
+            if (p.containsKey("sendgridTemplateId")){
+                String templateId = p.getProperty("sendgridTemplateId");
+                _logger.debug("Send Sendgrid using sendgrid template: {}", templateId);
+                mail.setTemplateId(templateId);
+                p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
+            } else {
+                _logger.debug("Send Sendgrid using curity template");
+                mail.addContent(new Content("text/plain", renderableEmail.renderPlainText()));
+                mail.addContent(new Content("text/html", renderableEmail.render()));
+                mail.setSubject(renderableEmail.getSubject());
+            }
+            mail.addPersonalization(personalization);
             request.setBody(mail.build());
             Response response = sg.api(request);
 
-            if (response.getStatusCode()==202)
-            {
+            if (response.getStatusCode() == 202) {
                 _logger.debug("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
-            }
-            else
-            {
+            } else {
                 _logger.debug("Failed to send email using Sendgrid");
                 throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send email using Sendgrid");
             }
-
         } catch (IOException e) {
             throw new IOException("Failed to send email using Sendgrid", e);
         }
