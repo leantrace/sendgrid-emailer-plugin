@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.example.curity.SendGridEmailSender;
+package io.curity.SendGridEmailSender;
 
 import se.curity.identityserver.sdk.email.Emailer;
 import se.curity.identityserver.sdk.plugin.descriptor.EmailProviderPluginDescriptor;

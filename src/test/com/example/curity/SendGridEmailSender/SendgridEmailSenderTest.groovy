@@ -15,6 +15,8 @@
  */
 package com.example.curity.SendGridEmailSender
 
+import io.curity.SendGridEmailSender.SendGridEmailSender
+import io.curity.SendGridEmailSender.SendGridEmailSenderConfig
 import se.curity.identityserver.sdk.data.email.RenderableEmail
 import se.curity.identityserver.sdk.service.ExceptionFactory
 import spock.lang.Specification
