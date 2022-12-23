@@ -78,9 +78,6 @@ public final class SendGridEmailSender implements Emailer
                         _logger.warn("Invalid ASM ID, value must be an integer, but currently is={}", p.getProperty("sendgridAsmId"));
                     }
                 }
-                if (p.containsKey("subject")) {
-                    mail.setSubject(p.getProperty("subject"));
-                }
                 p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
             } else {
                 _logger.info("Send Sendgrid using curity template");
