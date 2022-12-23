@@ -20,6 +20,7 @@ import com.sendgrid.Request;
 import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.ASM;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
 import com.sendgrid.helpers.mail.objects.Personalization;
@@ -48,7 +49,7 @@ public final class SendGridEmailSender implements Emailer
     @Override
     public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException {
         try {
-            _logger.debug(renderableEmail.renderPlainText());
+            _logger.info(renderableEmail.renderPlainText());
             Properties p = new Properties();
             try {
                 p.load(new StringReader(renderableEmail.renderPlainText()));
@@ -65,11 +66,22 @@ public final class SendGridEmailSender implements Emailer
             mail.setSubject(renderableEmail.getSubject());
             if (p.containsKey("sendgridTemplateId")){
                 String templateId = p.getProperty("sendgridTemplateId");
-                _logger.debug("Send Sendgrid using sendgrid template: {}", templateId);
+                _logger.info("Send Sendgrid using sendgrid template: {}", templateId);
                 mail.setTemplateId(templateId);
+                if (p.containsKey("sendgridAsmId")) {
+                    try {
+                        int sendgridAsmId = Integer.parseInt(p.getProperty("sendgridAsmId"));
+                        ASM asm = new ASM();
+                        asm.setGroupId(sendgridAsmId);
+                        asm.setGroupsToDisplay(new int[]{sendgridAsmId});
+                        mail.setASM(asm);
+                    } catch (NumberFormatException e) {
+                        _logger.warn("Invalid ASM ID, value must be an integer, but currently is={}", p.getProperty("sendgridAsmId"));
+                    }
+                }
                 p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
             } else {
-                _logger.debug("Send Sendgrid using curity template");
+                _logger.info("Send Sendgrid using curity template");
                 mail.addContent(new Content("text/plain", renderableEmail.renderPlainText()));
                 mail.addContent(new Content("text/html", renderableEmail.render()));
                 mail.setSubject(renderableEmail.getSubject());
@@ -78,10 +90,13 @@ public final class SendGridEmailSender implements Emailer
             request.setBody(mail.build());
             Response response = sg.api(request);
 
+            _logger.info(response.getBody());
+            _logger.info(response.getStatusCode()+"");
+
             if (response.getStatusCode() == 202) {
-                _logger.debug("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
+                _logger.info("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
             } else {
-                _logger.debug("Failed to send email using Sendgrid");
+                _logger.info("Failed to send email using Sendgrid");
                 throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send email using Sendgrid");
             }
         } catch (IOException e) {
