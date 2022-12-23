@@ -63,7 +63,6 @@ public final class SendGridEmailSender implements Emailer
             Email to = new Email(recipient);
             personalization.addTo(to);
             mail.setFrom(new Email(_configuration.getDefaultSender()));
-            mail.setSubject(renderableEmail.getSubject());
             if (p.containsKey("sendgridTemplateId")){
                 String templateId = p.getProperty("sendgridTemplateId");
                 _logger.info("Send Sendgrid using sendgrid template: {}", templateId);
@@ -78,6 +77,9 @@ public final class SendGridEmailSender implements Emailer
                     } catch (NumberFormatException e) {
                         _logger.warn("Invalid ASM ID, value must be an integer, but currently is={}", p.getProperty("sendgridAsmId"));
                     }
+                }
+                if (p.containsKey("subject")) {
+                    mail.setSubject(p.getProperty("subject"));
                 }
                 p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
             } else {
