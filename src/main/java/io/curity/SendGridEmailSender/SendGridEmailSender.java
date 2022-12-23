@@ -49,7 +49,7 @@ public final class SendGridEmailSender implements Emailer
     @Override
     public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException {
         try {
-            _logger.info(renderableEmail.renderPlainText());
+            _logger.debug(renderableEmail.renderPlainText());
             Properties p = new Properties();
             try {
                 p.load(new StringReader(renderableEmail.renderPlainText()));
@@ -65,7 +65,7 @@ public final class SendGridEmailSender implements Emailer
             mail.setFrom(new Email(_configuration.getDefaultSender()));
             if (p.containsKey("sendgridTemplateId")){
                 String templateId = p.getProperty("sendgridTemplateId");
-                _logger.info("Send Sendgrid using sendgrid template: {}", templateId);
+                _logger.debug("Send Sendgrid using sendgrid template: {}", templateId);
                 mail.setTemplateId(templateId);
                 if (p.containsKey("sendgridAsmId")) {
                     try {
@@ -80,7 +80,7 @@ public final class SendGridEmailSender implements Emailer
                 }
                 p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
             } else {
-                _logger.info("Send Sendgrid using curity template");
+                _logger.debug("Send Sendgrid using curity template");
                 mail.addContent(new Content("text/plain", renderableEmail.renderPlainText()));
                 mail.addContent(new Content("text/html", renderableEmail.render()));
                 mail.setSubject(renderableEmail.getSubject());
@@ -89,13 +89,13 @@ public final class SendGridEmailSender implements Emailer
             request.setBody(mail.build());
             Response response = sg.api(request);
 
-            _logger.info(response.getBody());
-            _logger.info(response.getStatusCode()+"");
+            _logger.debug(response.getBody());
+            _logger.debug(response.getStatusCode()+"");
 
             if (response.getStatusCode() == 202) {
-                _logger.info("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
+                _logger.debug("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
             } else {
-                _logger.info("Failed to send email using Sendgrid");
+                _logger.debug("Failed to send email using Sendgrid");
                 throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send email using Sendgrid");
             }
         } catch (IOException e) {
