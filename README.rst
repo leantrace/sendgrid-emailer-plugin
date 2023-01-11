@@ -43,7 +43,7 @@ Sendgrid Templating
 """""""""""""
 To activate Sendgrid Templated, override the desired email *.txt.vm template as documented in Curity and add at least one mandatory parameter:
 ``sendgridTemplateId=1234abc``
-You can as many additional parameters as well, which will be passed as sendgrid parameters to the template and substituted in the template.
+You can have as many additional parameters as well, which will be passed as sendgrid parameters to the template and substituted in the template.
 
 The file must be in *.properties format:
 ``

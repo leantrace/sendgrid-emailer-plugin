@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package io.curity.SendGridEmailSender;
+package io.curity.plugin.sendgrid;
 
 import com.sendgrid.Method;
 import com.sendgrid.Request;
