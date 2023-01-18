@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import se.curity.identityserver.sdk.data.email.RenderableEmail;
 import se.curity.identityserver.sdk.email.Emailer;
 import se.curity.identityserver.sdk.errors.ErrorCode;
+import se.curity.identityserver.sdk.service.ExceptionFactory;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -36,69 +37,100 @@ import java.util.Properties;
 
 public final class SendGridEmailSender implements Emailer
 {
-    private final SendGridEmailSenderConfig _configuration;
     private final String _sendGridAPIKey;
     private static final Logger _logger = LoggerFactory.getLogger(SendGridEmailSender.class);
+    private final boolean _sendTemplatedEmails;
+    private final ExceptionFactory _exceptionFactory;
+    private static final String SENDGRID_TEMPLATE_ID = "sendgridTemplateId";
+    private static final String SENDGRID_ASM_ID = "sendgridAsmId";
+    private final String _defaultSender;
+    private final String _pluginId;
 
     public SendGridEmailSender(SendGridEmailSenderConfig configuration)
     {
-        _configuration = configuration;
+        _sendTemplatedEmails = configuration.getSendTemplatedEmails();
+        _exceptionFactory = configuration.getExceptionFactory();
         _sendGridAPIKey = configuration.getSendGridApiKey();
+        _defaultSender = configuration.getDefaultSender();
+        _pluginId = configuration.id();
     }
 
     @Override
-    public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException {
-        try {
+    public void sendEmail(RenderableEmail renderableEmail, String recipient) throws IOException
+    {
+        try
+        {
             _logger.debug(renderableEmail.renderPlainText());
-            Properties p = new Properties();
-            try {
-                p.load(new StringReader(renderableEmail.renderPlainText()));
-            } catch (IOException e){/*ignore */}
-            SendGrid sg = new SendGrid(_sendGridAPIKey);
-            Request request = new Request();
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            Personalization personalization = new Personalization();
             Mail mail = new Mail();
-            Email to = new Email(recipient);
-            personalization.addTo(to);
-            mail.setFrom(new Email(_configuration.getDefaultSender()));
-            if (p.containsKey("sendgridTemplateId")){
-                String templateId = p.getProperty("sendgridTemplateId");
+            Personalization personalization = new Personalization();
+            if (_sendTemplatedEmails)
+            {
+                Properties p = new Properties();
+                try
+                {
+                    p.load(new StringReader(renderableEmail.renderPlainText()));
+                }
+                catch (IOException e)
+                {
+                    _logger.error("The authenticator is configured to use templated emails but the template used " +
+                            "cannot be parsed as properties");
+                    throw _exceptionFactory.internalServerException(ErrorCode.CONFIGURATION_ERROR, "template is not in the correct format");
+                }
+                String templateId = p.getProperty(SENDGRID_TEMPLATE_ID);
                 _logger.debug("Send Sendgrid using sendgrid template: {}", templateId);
                 mail.setTemplateId(templateId);
-                if (p.containsKey("sendgridAsmId")) {
-                    try {
-                        int sendgridAsmId = Integer.parseInt(p.getProperty("sendgridAsmId"));
+                if (p.containsKey(SENDGRID_ASM_ID))
+                {
+                    try
+                    {
+                        int sendgridAsmId = Integer.parseInt(p.getProperty(SENDGRID_ASM_ID));
                         ASM asm = new ASM();
                         asm.setGroupId(sendgridAsmId);
                         asm.setGroupsToDisplay(new int[]{sendgridAsmId});
                         mail.setASM(asm);
-                    } catch (NumberFormatException e) {
-                        _logger.warn("Invalid ASM ID, value must be an integer, but currently is={}", p.getProperty("sendgridAsmId"));
+                    }
+                    catch (NumberFormatException e)
+                    {
+                        _logger.warn("Invalid ASM ID, value must be an integer, but currently is={}", p.getProperty(SENDGRID_ASM_ID));
                     }
                 }
                 p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
-            } else {
+            }
+            else
+            {
                 _logger.debug("Send Sendgrid using curity template");
                 mail.addContent(new Content("text/plain", renderableEmail.renderPlainText()));
                 mail.addContent(new Content("text/html", renderableEmail.render()));
                 mail.setSubject(renderableEmail.getSubject());
             }
+
+            SendGrid sg = new SendGrid(_sendGridAPIKey);
+            Request request = new Request();
+            request.setMethod(Method.POST);
+            request.setEndpoint("mail/send");
+
+            Email to = new Email(recipient);
+            personalization.addTo(to);
+            mail.setFrom(new Email(_defaultSender));
             mail.addPersonalization(personalization);
             request.setBody(mail.build());
             Response response = sg.api(request);
 
             _logger.debug(response.getBody());
-            _logger.debug(response.getStatusCode()+"");
+            _logger.debug(response.getStatusCode() + "");
 
-            if (response.getStatusCode() == 202) {
-                _logger.debug("Sent email to {} using Sendgrid mailer {}", recipient, _configuration.id());
-            } else {
-                _logger.debug("Failed to send email using Sendgrid");
-                throw _configuration.getExceptionFactory().internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send email using Sendgrid");
+            if (response.getStatusCode() == 202)
+            {
+                _logger.debug("Sent email to {} using Sendgrid mailer {}", recipient, _pluginId);
             }
-        } catch (IOException e) {
+            else
+            {
+                _logger.debug("Failed to send email using Sendgrid");
+                throw _exceptionFactory.internalServerException(ErrorCode.EXTERNAL_SERVICE_ERROR, "Failed to send email using Sendgrid");
+            }
+        }
+        catch (IOException e)
+        {
             throw new IOException("Failed to send email using Sendgrid", e);
         }
     }
