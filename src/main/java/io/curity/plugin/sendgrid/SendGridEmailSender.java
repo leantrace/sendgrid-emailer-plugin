@@ -63,20 +63,19 @@ public final class SendGridEmailSender implements Emailer
             _logger.debug(renderableEmail.renderPlainText());
             Mail mail = new Mail();
             Personalization personalization = new Personalization();
-            if (_sendTemplatedEmails)
+            Properties p = new Properties();
+            try
             {
-                Properties p = new Properties();
-                try
-                {
-                    p.load(new StringReader(renderableEmail.renderPlainText()));
-                }
-                catch (IOException e)
-                {
-                    _logger.error("The authenticator is configured to use templated emails but the template used " +
-                            "cannot be parsed as properties");
-                    throw _exceptionFactory.internalServerException(ErrorCode.CONFIGURATION_ERROR, "template is not in the correct format");
-                }
-                String templateId = p.getProperty(SENDGRID_TEMPLATE_ID);
+                p.load(new StringReader(renderableEmail.renderPlainText()));
+            }
+            catch (IOException e)
+            {
+                _logger.warn("The authenticator is configured to use templated emails but the template used " +
+                        "cannot be parsed as properties. Try loading Template");
+                //throw _exceptionFactory.internalServerException(ErrorCode.CONFIGURATION_ERROR, "template is not in the correct format");
+            }
+            String templateId = p.getProperty(SENDGRID_TEMPLATE_ID);
+            if (templateId != null) {
                 _logger.debug("Send Sendgrid using sendgrid template: {}", templateId);
                 mail.setTemplateId(templateId);
                 if (p.containsKey(SENDGRID_ASM_ID))
