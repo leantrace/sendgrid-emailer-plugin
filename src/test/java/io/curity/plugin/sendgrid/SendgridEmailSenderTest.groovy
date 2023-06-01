@@ -13,7 +13,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.example.curity.SendGridEmailSender
+package io.curity.plugin.sendgrid
+
 
 import se.curity.identityserver.sdk.data.email.RenderableEmail
 import se.curity.identityserver.sdk.service.ExceptionFactory

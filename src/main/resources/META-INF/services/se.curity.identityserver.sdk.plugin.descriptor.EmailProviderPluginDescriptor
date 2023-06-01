@@ -1,1 +1,1 @@
-com.example.curity.SendGridEmailSender.SendGridEmailSenderDescriptor
+io.curity.plugin.sendgrid.SendGridEmailSenderDescriptor

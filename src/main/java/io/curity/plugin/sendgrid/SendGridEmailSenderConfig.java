@@ -13,9 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.example.curity.SendGridEmailSender;
+package io.curity.plugin.sendgrid;
 
 import se.curity.identityserver.sdk.config.Configuration;
+import se.curity.identityserver.sdk.config.annotation.DefaultBoolean;
 import se.curity.identityserver.sdk.config.annotation.Description;
 import se.curity.identityserver.sdk.service.ExceptionFactory;
 
@@ -28,4 +29,8 @@ public interface SendGridEmailSenderConfig extends Configuration
     String getDefaultSender();
 
     ExceptionFactory getExceptionFactory();
+
+    @DefaultBoolean(false)
+    @Description("If enabled requires the template to be in *.properties format and contain sendgridTemplateId")
+    boolean getSendTemplatedEmails();
 }
