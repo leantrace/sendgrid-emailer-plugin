@@ -64,9 +64,11 @@ public final class SendGridEmailSender implements Emailer
             Mail mail = new Mail();
             Personalization personalization = new Personalization();
             Properties p = new Properties();
+            String templateId = null;
             try
             {
                 p.load(new StringReader(renderableEmail.renderPlainText()));
+                templateId = p.getProperty(SENDGRID_TEMPLATE_ID);
             }
             catch (IOException e)
             {
@@ -74,7 +76,6 @@ public final class SendGridEmailSender implements Emailer
                         "cannot be parsed as properties. Try loading Template");
                 //throw _exceptionFactory.internalServerException(ErrorCode.CONFIGURATION_ERROR, "template is not in the correct format");
             }
-            String templateId = p.getProperty(SENDGRID_TEMPLATE_ID);
             if (templateId != null) {
                 _logger.debug("Send Sendgrid using sendgrid template: {}", templateId);
                 mail.setTemplateId(templateId);
