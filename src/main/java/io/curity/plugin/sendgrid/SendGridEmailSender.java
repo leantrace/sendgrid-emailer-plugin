@@ -34,6 +34,8 @@ import se.curity.identityserver.sdk.service.ExceptionFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class SendGridEmailSender implements Emailer
 {
@@ -44,6 +46,7 @@ public final class SendGridEmailSender implements Emailer
     private static final String SENDGRID_TEMPLATE_ID = "sendgridTemplateId";
     private static final String SENDGRID_ASM_ID = "sendgridAsmId";
     private final String _defaultSender;
+    private final String _defaultOrganization;
     private final String _pluginId;
 
     public SendGridEmailSender(SendGridEmailSenderConfig configuration)
@@ -51,8 +54,24 @@ public final class SendGridEmailSender implements Emailer
         _sendTemplatedEmails = configuration.getSendTemplatedEmails();
         _exceptionFactory = configuration.getExceptionFactory();
         _sendGridAPIKey = configuration.getSendGridApiKey();
-        _defaultSender = configuration.getDefaultSender();
+        _defaultSender = removeEmailComment(configuration.getDefaultSender());
+        _defaultOrganization = extractEmailComment(configuration.getDefaultSender());
         _pluginId = configuration.id();
+    }
+
+    private String extractEmailComment(String email) {
+        try {
+            Pattern pattern = Pattern.compile("\\(([^)]*)\\)");
+            Matcher matcher = pattern.matcher(email);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        } catch (Exception e) { /*ignore*/}
+        return null;
+    }
+
+    private String removeEmailComment(String email) {
+        return email.replaceAll("\\([^)]*\\)", "");
     }
 
     @Override
@@ -94,7 +113,14 @@ public final class SendGridEmailSender implements Emailer
                         _logger.warn("Invalid ASM ID, value must be an integer, but currently is={}", p.getProperty(SENDGRID_ASM_ID));
                     }
                 }
-                p.forEach((k, v) -> personalization.addDynamicTemplateData(k.toString(), v.toString()));
+                p.forEach((k, v) -> {
+                    if (k.toString().equals("subject") && _defaultOrganization != null) {
+                        String vv = v.toString()+" "+_defaultOrganization;
+                        personalization.addDynamicTemplateData(k.toString(), vv);
+                    } else {
+                        personalization.addDynamicTemplateData(k.toString(), v.toString());
+                    }
+                });
             }
             else
             {
